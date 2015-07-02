@@ -1,4 +1,4 @@
-package log
+package lm
 
 import (
 	"fmt"
@@ -63,27 +63,28 @@ func (p *MessageProducer) SetDefaultContext(context string) *MessageProducer {
 	return p
 }
 
-func (p *MessageProducer) newMessagef(f string, args ...interface{}) *Message {
+func (p *MessageProducer) newMessagef(value string) *Message {
 	return &Message{
-		Value:          fmt.Sprintf(f, args...),
+		Value:          value,
 		Formatter:      p.Formatter,
 		StringFormat:   p.StringFormat,
 		ExtraCalldepth: p.ExtraCalldepth,
 		Level:          p.DefaultLevel,
 		Context:        p.DefaultContext,
+		producer:       p,
 	}
 }
 
 // NewMessage creates a new message.
 func (p *MessageProducer) NewMessage(args ...interface{}) *Message {
-	m := p.newMessagef("%s", args...)
+	m := p.newMessagef(fmt.Sprint(args...))
 	m.ShortFile = lookupCaller(p.ExtraCalldepth)
 	return m
 }
 
 // NewMessagef creates a new message.
 func (p *MessageProducer) NewMessagef(f string, args ...interface{}) *Message {
-	m := p.newMessagef(f, args)
+	m := p.newMessagef(fmt.Sprintf(f, args...))
 	m.ShortFile = lookupCaller(p.ExtraCalldepth)
 	return m
 }
@@ -92,7 +93,7 @@ func (p *MessageProducer) NewMessagef(f string, args ...interface{}) *Message {
 // If the error is a message, it becomes the child of a new Message.
 // NOTE: disregard the DefaultLevel and sets LevelError unless error is a message.
 func (p *MessageProducer) NewError(err error) *Message {
-	m := p.NewMessagef("")
+	m := p.newMessagef("")
 	m.ShortFile = lookupCaller(p.ExtraCalldepth)
 	if msg, ok := err.(*Message); ok {
 		m.Level = msg.Level
@@ -102,6 +103,7 @@ func (p *MessageProducer) NewError(err error) *Message {
 		} else {
 			m.Context = p.DefaultContext
 		}
+		m.Set(msg)
 	} else {
 		m.Level = LevelError
 		m.Context = p.DefaultContext

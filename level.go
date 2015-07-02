@@ -1,11 +1,12 @@
-package log
+package lm
 
 // Level type.
 type Level int
 
 // LogLvel enum.
 const (
-	LevelDebug Level = iota
+	_ Level = iota
+	LevelDebug
 	LevelInfo
 	LevelWarning
 	LevelError

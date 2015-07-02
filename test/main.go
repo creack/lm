@@ -3,10 +3,10 @@ package main
 import (
 	"fmt"
 
-	"github.com/creack/log"
+	"github.com/creack/lm"
 )
 
-var errProducer = log.NewProducer().SetDefaultLevel(log.LevelError)
+var errProducer = lm.NewProducer().SetDefaultLevel(lm.LevelError)
 
 // Common errors.
 var (
@@ -52,27 +52,26 @@ var (
 // )
 
 func fail() error {
-	// return ErrMissingURL
 	return fmt.Errorf("FAILERROR")
 }
 
 func test() error {
 	if err := fail(); err != nil {
-		return log.NewError(err)
+		return ErrMissingURL.NewError(err)
 	}
 	return nil
 }
 
 func test2() error {
 	if err := test(); err != nil {
-		return log.NewError(err)
+		return lm.NewMessage("test").NewError(err)
 	}
 	return nil
 }
 
 func main() {
 	if err := test2(); err != nil {
-		buf, _ := err.(*log.Message).Dump()
+		buf, _ := err.(*lm.Message).Dump()
 		fmt.Printf("%s\n", buf)
 		fmt.Printf("%s\n", err)
 	}

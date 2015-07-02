@@ -1,4 +1,4 @@
-package log
+package lm
 
 import "encoding/json"
 
@@ -19,6 +19,8 @@ type Message struct {
 	Formatter      func(*Message) string `json:"-"`
 	StringFormat   string                `json:"-"`
 	ExtraCalldepth int                   `json:"-"`
+
+	producer *MessageProducer
 }
 
 // NewMessage instantiate a new message.
@@ -34,6 +36,23 @@ func NewMessagef(f string, args ...interface{}) *Message {
 // NewError create a new message form the given error.
 func NewError(err error) *Message {
 	return DefaultProducer.NewError(err)
+}
+
+// Set updates all empty fields with the given message's ones.
+func (m *Message) Set(in *Message) *Message {
+	if m.Context == "" {
+		m.Context = in.Context
+	}
+	if m.Code == 0 {
+		m.Code = in.Code
+	}
+	if m.Name == "" {
+		m.Name = in.Name
+	}
+	if m.Level == 0 {
+		m.Level = in.Level
+	}
+	return m
 }
 
 // Error implement the Error interface to let the message to be passed via error return.
@@ -94,4 +113,35 @@ func (m *Message) SetFormatter(formatter func(*Message) string) *Message {
 func (m *Message) SetStringFormat(stringFormat string) *Message {
 	m.StringFormat = stringFormat
 	return m
+}
+
+// NewError wraps the producer's NewError.
+func (m *Message) NewError(err error) *Message {
+	if m.producer == nil {
+		m.producer = DefaultProducer
+	}
+	m1 := m.producer.NewError(err)
+	m1.ShortFile = lookupCaller(m.producer.ExtraCalldepth)
+	m1.Child = m
+	return m1.Set(m)
+}
+
+// NewMessage eraps the producer's NewMessage.
+func (m *Message) NewMessage(args ...interface{}) *Message {
+	if m.producer == nil {
+		m.producer = DefaultProducer
+	}
+	m1 := m.producer.NewMessage(args...)
+	m1.Child = m
+	return m1.Set(m)
+}
+
+// NewMessagef eraps the producer's NewMessage.
+func (m *Message) NewMessagef(f string, args ...interface{}) *Message {
+	if m.producer == nil {
+		m.producer = DefaultProducer
+	}
+	m1 := m.producer.NewMessagef(f, args...)
+	m1.Child = m
+	return m1.Set(m)
 }
